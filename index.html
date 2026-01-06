@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>矢量工坊 - SVG 编辑器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark"></div>
+          <div class="brand-text">
+            <div class="brand-title">矢量工坊</div>
+            <div class="brand-subtitle">SVG 编辑器 V1</div>
+          </div>
+        </div>
+        <nav class="menu">
+          <div class="menu-group" data-menu="file">
+            <button class="menu-trigger">文件</button>
+            <div class="menu-dropdown">
+              <button data-action="new">新建</button>
+              <button data-action="open">打开 SVG</button>
+              <button data-action="save">保存 SVG</button>
+              <button data-action="export">导出 PNG</button>
+            </div>
+          </div>
+          <div class="menu-group" data-menu="edit">
+            <button class="menu-trigger">编辑</button>
+            <div class="menu-dropdown">
+              <button data-action="undo">撤销</button>
+              <button data-action="redo">重做</button>
+              <div class="menu-sep"></div>
+              <button data-action="cut">剪切</button>
+              <button data-action="copy">复制</button>
+              <button data-action="paste">粘贴</button>
+              <button data-action="delete">删除</button>
+            </div>
+          </div>
+          <div class="menu-group" data-menu="object">
+            <button class="menu-trigger">对象</button>
+            <div class="menu-dropdown">
+              <button data-action="group">编组</button>
+              <button data-action="ungroup">解组</button>
+              <div class="menu-sep"></div>
+              <button data-action="front">置顶</button>
+              <button data-action="back">置底</button>
+              <button data-action="forward">上移一层</button>
+              <button data-action="backward">下移一层</button>
+              <div class="menu-sep"></div>
+              <button data-action="align-left">左对齐</button>
+              <button data-action="align-center-x">水平居中</button>
+              <button data-action="align-right">右对齐</button>
+              <button data-action="align-top">上对齐</button>
+              <button data-action="align-center-y">垂直居中</button>
+              <button data-action="align-bottom">下对齐</button>
+              <div class="menu-sep"></div>
+              <button data-action="convert-path">转为路径</button>
+            </div>
+          </div>
+          <div class="menu-group" data-menu="view">
+            <button class="menu-trigger">视图</button>
+            <div class="menu-dropdown">
+              <button data-action="zoom-in">放大</button>
+              <button data-action="zoom-out">缩小</button>
+              <button data-action="zoom-reset">重置缩放</button>
+              <div class="menu-sep"></div>
+              <button data-action="fit">适配内容</button>
+              <button data-action="toggle-ruler">标尺开关</button>
+              <button data-action="toggle-snap">吸附开关</button>
+            </div>
+          </div>
+          <div class="menu-group" data-menu="help">
+            <button class="menu-trigger">帮助</button>
+            <div class="menu-dropdown">
+              <button data-action="source">源码视图</button>
+              <button data-action="shortcuts">快捷键</button>
+            </div>
+          </div>
+        </nav>
+        <div class="topbar-actions">
+          <button class="ghost-btn" id="btn-undo">撤销</button>
+          <button class="ghost-btn" id="btn-redo">重做</button>
+          <div class="zoom-readout" id="zoom-readout">100%</div>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="toolbar">
+          <div class="toolbar-group">
+            <button class="tool active" data-tool="select">选择</button>
+            <button class="tool" data-tool="pan">拖拽</button>
+            <button class="tool" data-tool="zoom">缩放</button>
+          </div>
+          <div class="toolbar-group">
+            <button class="tool" data-tool="rect">矩形</button>
+            <button class="tool" data-tool="circle">圆形</button>
+            <button class="tool" data-tool="ellipse">椭圆</button>
+            <button class="tool" data-tool="line">线段</button>
+            <button class="tool" data-tool="path">路径</button>
+            <button class="tool" data-tool="text">文字</button>
+            <button class="tool" data-tool="image">图片</button>
+          </div>
+          <div class="toolbar-group">
+            <button class="tool" data-tool="nodes">节点</button>
+          </div>
+        </aside>
+
+        <main class="canvas-wrap">
+          <div class="canvas-meta">
+            <div>
+              <div class="doc-title" id="doc-title">未命名</div>
+              <div class="doc-status" id="doc-status">就绪</div>
+            </div>
+            <div class="canvas-meta-actions">
+              <button class="ghost-btn" id="btn-fit">适配</button>
+              <button class="ghost-btn" id="btn-snap">吸附: 开</button>
+            </div>
+          </div>
+          <div class="canvas-stage">
+            <canvas class="ruler ruler-x hidden" id="ruler-x"></canvas>
+            <canvas class="ruler ruler-y hidden" id="ruler-y"></canvas>
+            <div class="canvas-container" id="canvas-container">
+              <svg
+                id="svg-canvas"
+                width="960"
+                height="640"
+                viewBox="0 0 960 640"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <defs id="sve-defs"></defs>
+                <g id="sve-scene">
+                  <rect
+                    id="sve-bg"
+                    data-sve-ui="1"
+                    x="0"
+                    y="0"
+                    width="960"
+                    height="640"
+                  ></rect>
+                  <g id="sve-content"></g>
+                  <g id="sve-guides" data-sve-ui="1"></g>
+                  <g id="sve-selection" data-sve-ui="1"></g>
+                  <g id="sve-nodes" data-sve-ui="1"></g>
+                </g>
+              </svg>
+            </div>
+          </div>
+          <div class="statusbar">
+            <div class="status-left">
+              <span id="status-tool">选择</span>
+              <span id="status-selection">未选择</span>
+            </div>
+            <div class="status-right">
+              <span id="status-zoom">缩放 100%</span>
+            </div>
+          </div>
+        </main>
+
+        <aside class="properties">
+          <section class="panel-section">
+            <div class="panel-title">选择</div>
+            <div class="panel-body" id="panel-selection">
+              <div class="field">
+                <label for="field-type">类型</label>
+                <input id="field-type" type="text" disabled />
+              </div>
+              <div class="field">
+                <label for="field-id">标识</label>
+                <input id="field-id" type="text" placeholder="自动" />
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-section" id="panel-geometry">
+            <div class="panel-title">几何</div>
+            <div class="panel-body" id="geometry-fields"></div>
+          </section>
+
+          <section class="panel-section" id="panel-style">
+            <div class="panel-title">样式</div>
+            <div class="panel-body">
+              <div class="field">
+                <label for="field-fill">填充</label>
+                <div class="color-inputs">
+                  <input id="field-fill" type="text" placeholder="#ffffff" />
+                  <input id="field-fill-color" type="color" value="#ffffff" />
+                </div>
+              </div>
+              <div class="field">
+                <label for="field-stroke">描边</label>
+                <div class="color-inputs">
+                  <input id="field-stroke" type="text" placeholder="#222222" />
+                  <input id="field-stroke-color" type="color" value="#222222" />
+                </div>
+              </div>
+              <div class="field">
+                <label for="field-stroke-width">描边宽度</label>
+                <input id="field-stroke-width" type="number" min="0" step="0.5" />
+              </div>
+              <div class="field">
+                <label for="field-opacity">透明度</label>
+                <input id="field-opacity" type="number" min="0" max="1" step="0.05" />
+              </div>
+              <div class="field">
+                <label for="field-linecap">线帽</label>
+                <select id="field-linecap">
+                  <option value="">自动</option>
+                  <option value="butt">平头</option>
+                  <option value="round">圆头</option>
+                  <option value="square">方头</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="field-linejoin">拐角</label>
+                <select id="field-linejoin">
+                  <option value="">自动</option>
+                  <option value="miter">尖角</option>
+                  <option value="round">圆角</option>
+                  <option value="bevel">斜角</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="field-dasharray">虚线</label>
+                <input id="field-dasharray" type="text" placeholder="5 4" />
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-section" id="panel-transform">
+            <div class="panel-title">变换</div>
+            <div class="panel-body">
+              <div class="field">
+                <label for="field-rotate">旋转</label>
+                <input id="field-rotate" type="number" step="1" />
+              </div>
+              <div class="field">
+                <label for="field-scale">缩放</label>
+                <input id="field-scale" type="number" step="0.1" value="1" />
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-section" id="panel-path">
+            <div class="panel-title">路径</div>
+            <div class="panel-body">
+              <div class="field">
+                <label for="field-path-mode">模式</label>
+                <select id="field-path-mode">
+                  <option value="off">关闭</option>
+                  <option value="nodes">节点编辑（直线）</option>
+                </select>
+              </div>
+              <div class="panel-inline">
+                <button class="ghost-btn" id="btn-add-node">添加节点</button>
+                <button class="ghost-btn" id="btn-del-node">删除节点</button>
+              </div>
+              <div class="panel-inline">
+                <button class="ghost-btn" id="btn-toggle-close">闭合切换</button>
+                <button class="ghost-btn" id="btn-convert-path">转为路径</button>
+              </div>
+              <p class="panel-note">
+                V1 仅支持直线节点编辑，曲线进入节点模式后会被扁平化。
+              </p>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <dialog class="modal" id="modal-new">
+      <form class="modal-card">
+        <div class="modal-title">新建文档</div>
+        <div class="modal-body">
+          <div class="field">
+            <label for="new-preset">预设</label>
+            <select id="new-preset">
+              <option value="1080x1080">正方形 1080 x 1080</option>
+              <option value="1920x1080">高清 1920 x 1080</option>
+              <option value="1366x768">笔记本 1366 x 768</option>
+              <option value="1200x1600">海报 1200 x 1600</option>
+              <option value="custom">自定义</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="new-width">宽度</label>
+              <input id="new-width" type="number" min="1" value="1080" />
+            </div>
+            <div class="field">
+              <label for="new-height">高度</label>
+              <input id="new-height" type="number" min="1" value="1080" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="new-bg">画布背景</label>
+            <input id="new-bg" type="color" value="#ffffff" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" data-close="modal-new">
+            取消
+          </button>
+          <button type="button" class="primary-btn" id="btn-new-confirm">
+            创建
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="modal-export">
+      <form class="modal-card">
+        <div class="modal-title">导出 PNG</div>
+        <div class="modal-body">
+          <div class="field">
+            <label for="export-scale">倍率</label>
+            <select id="export-scale">
+              <option value="1">1x</option>
+              <option value="2">2x</option>
+              <option value="3">3x</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="export-bg">背景</label>
+            <select id="export-bg">
+              <option value="transparent">透明</option>
+              <option value="canvas">使用画布背景</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>文件名</label>
+            <input id="export-name" type="text" value="导出" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" data-close="modal-export">
+            取消
+          </button>
+          <button type="button" class="primary-btn" id="btn-export-confirm">
+            导出
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal modal-wide" id="modal-source">
+      <form class="modal-card">
+        <div class="modal-title">SVG 源码</div>
+        <div class="modal-body">
+          <textarea id="source-editor" spellcheck="false"></textarea>
+          <div class="source-error" id="source-error"></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" data-close="modal-source">
+            关闭
+          </button>
+          <button type="button" class="primary-btn" id="btn-source-apply">
+            应用
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="modal-help">
+      <form class="modal-card">
+        <div class="modal-title">快捷键</div>
+        <div class="modal-body">
+          <div class="shortcut-grid">
+            <div><span>Ctrl/Cmd + N</span><span>新建</span></div>
+            <div><span>Ctrl/Cmd + O</span><span>打开</span></div>
+            <div><span>Ctrl/Cmd + S</span><span>保存 SVG</span></div>
+            <div><span>Ctrl/Cmd + Z</span><span>撤销</span></div>
+            <div><span>Ctrl/Cmd + Shift + Z</span><span>重做</span></div>
+            <div><span>Ctrl/Cmd + C</span><span>复制</span></div>
+            <div><span>Ctrl/Cmd + V</span><span>粘贴</span></div>
+            <div><span>Ctrl/Cmd + X</span><span>剪切</span></div>
+            <div><span>Delete</span><span>删除</span></div>
+            <div><span>Ctrl/Cmd + G</span><span>编组</span></div>
+            <div><span>Ctrl/Cmd + Shift + G</span><span>解组</span></div>
+            <div><span>Ctrl/Cmd + 0</span><span>重置缩放</span></div>
+            <div><span>Ctrl/Cmd + +/-</span><span>缩放</span></div>
+            <div><span>Space</span><span>临时拖拽</span></div>
+            <div><span>Ctrl/Cmd + E</span><span>源码视图</span></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="primary-btn" data-close="modal-help">
+            关闭
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <input id="file-open" type="file" accept=".svg" hidden />
+    <input
+      id="file-image"
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+      hidden
+    />
+
+    <div class="toast" id="toast"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
