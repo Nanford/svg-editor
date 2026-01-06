@@ -48,10 +48,13 @@ const fieldType = document.getElementById("field-type");
 const fieldId = document.getElementById("field-id");
 const fieldFill = document.getElementById("field-fill");
 const fieldFillColor = document.getElementById("field-fill-color");
+const btnFillNone = document.getElementById("btn-fill-none");
 const fieldStroke = document.getElementById("field-stroke");
 const fieldStrokeColor = document.getElementById("field-stroke-color");
+const btnStrokeNone = document.getElementById("btn-stroke-none");
 const fieldStrokeWidth = document.getElementById("field-stroke-width");
 const fieldOpacity = document.getElementById("field-opacity");
+const fieldOpacityRange = document.getElementById("field-opacity-range");
 const fieldLinecap = document.getElementById("field-linecap");
 const fieldLinejoin = document.getElementById("field-linejoin");
 const fieldDasharray = document.getElementById("field-dasharray");
@@ -65,6 +68,7 @@ const btnConvertPath = document.getElementById("btn-convert-path");
 
 const rulerX = document.getElementById("ruler-x");
 const rulerY = document.getElementById("ruler-y");
+const canvasStage = document.querySelector(".canvas-stage");
 
 const toast = document.getElementById("toast");
 
@@ -110,9 +114,11 @@ const toolLabels = {
   pan: "拖拽",
   zoom: "缩放",
   rect: "矩形",
+  square: "正方形",
   circle: "圆形",
   ellipse: "椭圆",
   line: "线段",
+  arrow: "箭头",
   path: "路径",
   text: "文字",
   image: "图片",
@@ -247,10 +253,7 @@ function bindFields() {
   });
 
   const styleFields = [
-    [fieldFill, "fill"],
-    [fieldStroke, "stroke"],
     [fieldStrokeWidth, "stroke-width"],
-    [fieldOpacity, "opacity"],
     [fieldLinecap, "stroke-linecap"],
     [fieldLinejoin, "stroke-linejoin"],
     [fieldDasharray, "stroke-dasharray"],
@@ -279,29 +282,9 @@ function bindFields() {
     });
   });
 
-  fieldFillColor.addEventListener("input", () => {
-    const value = fieldFillColor.value;
-    fieldFill.value = value;
-    applyStyleValue("fill", value);
-  });
-
-  fieldFillColor.addEventListener("change", () => {
-    if (state.selection.length) {
-      pushHistory("style");
-    }
-  });
-
-  fieldStrokeColor.addEventListener("input", () => {
-    const value = fieldStrokeColor.value;
-    fieldStroke.value = value;
-    applyStyleValue("stroke", value);
-  });
-
-  fieldStrokeColor.addEventListener("change", () => {
-    if (state.selection.length) {
-      pushHistory("style");
-    }
-  });
+  bindColorField(fieldFill, fieldFillColor, btnFillNone, "fill", "#ffffff");
+  bindColorField(fieldStroke, fieldStrokeColor, btnStrokeNone, "stroke", "#222222");
+  bindOpacityField();
 
   fieldRotate.addEventListener("change", () => {
     if (state.selection.length !== 1) {
@@ -631,8 +614,33 @@ function updateRulers() {
   if (!state.ui.showRulers) {
     return;
   }
+  positionRulers();
   drawRuler(rulerX, "x");
   drawRuler(rulerY, "y");
+}
+
+function positionRulers() {
+  if (!canvasStage) {
+    return;
+  }
+  const stageRect = canvasStage.getBoundingClientRect();
+  const svgRect = svg.getBoundingClientRect();
+  if (!stageRect.width || !stageRect.height || !svgRect.width || !svgRect.height) {
+    return;
+  }
+  const thickness = 28;
+  const offsetX = svgRect.left - stageRect.left;
+  const offsetY = svgRect.top - stageRect.top;
+
+  rulerX.style.left = `${offsetX}px`;
+  rulerX.style.top = `${Math.max(0, offsetY - thickness)}px`;
+  rulerX.style.width = `${svgRect.width}px`;
+  rulerX.style.height = `${thickness}px`;
+
+  rulerY.style.left = `${Math.max(0, offsetX - thickness)}px`;
+  rulerY.style.top = `${offsetY}px`;
+  rulerY.style.width = `${thickness}px`;
+  rulerY.style.height = `${svgRect.height}px`;
 }
 
 function drawRuler(canvas, axis) {
@@ -644,11 +652,12 @@ function drawRuler(canvas, axis) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, rect.width, rect.height);
 
-  ctx.fillStyle = "#1f1a15";
+  const theme = getRulerTheme();
+  ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, rect.width, rect.height);
-  ctx.strokeStyle = "rgba(255,255,255,0.5)";
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.font = "10px IBM Plex Sans";
+  ctx.strokeStyle = theme.line;
+  ctx.fillStyle = theme.text;
+  ctx.font = "11px IBM Plex Sans";
 
   const view = getUiViewBox();
   const length = axis === "x" ? view.width : view.height;
@@ -663,22 +672,27 @@ function drawRuler(canvas, axis) {
     value += step
   ) {
     const pos = (value - start) * scale;
+    const isMajor = Math.round(value) % (step * 5) === 0;
+    ctx.lineWidth = isMajor ? 1.4 : 1;
+    ctx.strokeStyle = isMajor ? theme.major : theme.line;
     if (axis === "x") {
       ctx.beginPath();
-      ctx.moveTo(pos, rect.height - 6);
+      ctx.moveTo(pos, rect.height - (isMajor ? 10 : 6));
       ctx.lineTo(pos, rect.height);
       ctx.stroke();
-      if (Math.round(value) % (step * 5) === 0) {
-        ctx.fillText(Math.round(value), pos + 2, 10);
+      if (isMajor) {
+        ctx.fillStyle = theme.text;
+        ctx.fillText(Math.round(value), pos + 2, 12);
       }
     } else {
       ctx.beginPath();
-      ctx.moveTo(rect.width - 6, pos);
+      ctx.moveTo(rect.width - (isMajor ? 10 : 6), pos);
       ctx.lineTo(rect.width, pos);
       ctx.stroke();
-      if (Math.round(value) % (step * 5) === 0) {
+      if (isMajor) {
+        ctx.fillStyle = theme.text;
         ctx.save();
-        ctx.translate(2, pos + 6);
+        ctx.translate(2, pos + 8);
         ctx.rotate(-Math.PI / 2);
         ctx.fillText(Math.round(value), 0, 0);
         ctx.restore();
@@ -687,6 +701,17 @@ function drawRuler(canvas, axis) {
   }
 }
 
+function getRulerTheme() {
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    bg: styles.getPropertyValue("--ruler-bg").trim() || "#2b241e",
+    line: styles.getPropertyValue("--ruler-line").trim() || "rgba(241,93,61,0.45)",
+    major:
+      styles.getPropertyValue("--ruler-line-strong").trim() ||
+      "rgba(241,93,61,0.75)",
+    text: styles.getPropertyValue("--ruler-text").trim() || "rgba(248,240,229,0.85)",
+  };
+}
 function pickRulerStep(length) {
   const steps = [10, 20, 50, 100, 200, 500, 1000];
   for (const step of steps) {
@@ -796,6 +821,12 @@ function serializeSvg(includeBackground) {
         el.removeAttribute(attr.name);
       }
     });
+  });
+  clone.querySelectorAll("[transform]").forEach((el) => {
+    const value = el.getAttribute("transform") || "";
+    if (value.includes("NaN") || value.includes("Infinity")) {
+      el.removeAttribute("transform");
+    }
   });
 
   const contentGroup = clone.querySelector("#sve-content");
@@ -1067,7 +1098,7 @@ function onPointerDown(event) {
     return;
   }
 
-  const selectable = findSelectable(target);
+  const selectable = findSelectable(target, { preferGroup: !event.altKey });
 
   if (state.ui.tool === "select" || state.ui.tool === "nodes") {
     if (selectable) {
@@ -1081,7 +1112,7 @@ function onPointerDown(event) {
     return;
   }
 
-  if (["rect", "circle", "ellipse", "line"].includes(state.ui.tool)) {
+  if (["rect", "square", "circle", "ellipse", "line", "arrow"].includes(state.ui.tool)) {
     startShapeDraw(point, state.ui.tool);
   }
 }
@@ -1178,7 +1209,8 @@ function svgPoint(event) {
   return pt.matrixTransform(matrix.inverse());
 }
 
-function findSelectable(target) {
+function findSelectable(target, options = {}) {
+  const preferGroup = options.preferGroup !== false;
   if (!target || target === svg) {
     return null;
   }
@@ -1187,6 +1219,12 @@ function findSelectable(target) {
   }
   if (!target.closest("#sve-content") || target.closest("defs")) {
     return null;
+  }
+  if (preferGroup) {
+    const group = target.closest("#sve-content g");
+    if (group) {
+      return group;
+    }
   }
   let node = target;
   while (node && node !== content) {
@@ -1242,7 +1280,9 @@ function clearSelection() {
 
 function updateSelectionUI() {
   selectionLayer.innerHTML = "";
-  guidesLayer.innerHTML = "";
+  if (!state.drag) {
+    guidesLayer.innerHTML = "";
+  }
   nodesLayer.innerHTML = "";
 
   const selection = state.selection;
@@ -1272,10 +1312,16 @@ function updateSelectionUI() {
     if (selection.length === 1 && !state.pathEdit) {
       const handles = getHandlePoints(bbox);
       handles.forEach((handle) => {
+        if (handle.type === "rotate") {
+          const arrow = createRotationArrow(handle.x, handle.y);
+          selectionLayer.appendChild(arrow.arc);
+          selectionLayer.appendChild(arrow.head);
+        }
+        const radius = handle.type === "rotate" ? 6 : 4;
         const circle = createSvgElement("circle", {
           cx: handle.x,
           cy: handle.y,
-          r: 5,
+          r: radius,
           class: `selection-handle ${handle.type === "rotate" ? "rotation-handle" : ""}`,
           "data-handle": handle.type,
         });
@@ -1312,10 +1358,7 @@ function updateFieldsForSelection() {
 
 function updateStyleFields() {
   const attrs = [
-    ["fill", fieldFill],
-    ["stroke", fieldStroke],
     ["stroke-width", fieldStrokeWidth],
-    ["opacity", fieldOpacity],
     ["stroke-linecap", fieldLinecap],
     ["stroke-linejoin", fieldLinejoin],
     ["stroke-dasharray", fieldDasharray],
@@ -1324,8 +1367,16 @@ function updateStyleFields() {
     const value = getCommonAttribute(attr);
     input.value = value ?? "";
   });
-  syncColorInput(fieldFill.value, fieldFillColor);
-  syncColorInput(fieldStroke.value, fieldStrokeColor);
+  const fillValue = getCommonAttribute("fill");
+  fieldFill.value = fillValue ?? "";
+  updateColorFieldState(fieldFill, fieldFillColor, btnFillNone);
+
+  const strokeValue = getCommonAttribute("stroke");
+  fieldStroke.value = strokeValue ?? "";
+  updateColorFieldState(fieldStroke, fieldStrokeColor, btnStrokeNone);
+
+  const opacityValue = getCommonOpacity();
+  setOpacityInputs(opacityValue);
 }
 
 function applyStyleValue(attr, value) {
@@ -1340,6 +1391,130 @@ function applyStyleValue(attr, value) {
     }
   });
   updateSelectionUI();
+}
+
+function bindColorField(input, colorInput, noneButton, attr, fallback) {
+  input.addEventListener("input", () => {
+    if (!state.selection.length) {
+      return;
+    }
+    const value = input.value.trim();
+    applyStyleValue(attr, value);
+    updateColorFieldState(input, colorInput, noneButton);
+  });
+
+  input.addEventListener("change", () => {
+    if (state.selection.length) {
+      pushHistory("style");
+    }
+  });
+
+  colorInput.addEventListener("input", () => {
+    if (!state.selection.length) {
+      return;
+    }
+    const value = colorInput.value;
+    input.value = value;
+    applyStyleValue(attr, value);
+    updateColorFieldState(input, colorInput, noneButton);
+  });
+
+  colorInput.addEventListener("change", () => {
+    if (state.selection.length) {
+      pushHistory("style");
+    }
+  });
+
+  if (noneButton) {
+    noneButton.addEventListener("click", () => {
+      if (!state.selection.length) {
+        return;
+      }
+      toggleNoneStyle(attr, input, colorInput, noneButton, fallback);
+      pushHistory("style");
+    });
+  }
+}
+
+function updateColorFieldState(input, colorInput, noneButton) {
+  const value = input.value.trim().toLowerCase();
+  const isNone = value === "none";
+  if (noneButton) {
+    noneButton.classList.toggle("active", isNone);
+    noneButton.setAttribute("aria-pressed", isNone ? "true" : "false");
+  }
+  if (colorInput) {
+    colorInput.disabled = isNone;
+  }
+  if (!isNone && colorInput) {
+    syncColorInput(input.value, colorInput);
+  }
+}
+
+function toggleNoneStyle(attr, input, colorInput, noneButton, fallback) {
+  const value = input.value.trim().toLowerCase();
+  if (value === "none") {
+    const restore =
+      input.dataset.prevColor ||
+      (colorInput ? colorInput.value : "") ||
+      fallback;
+    input.value = restore;
+    applyStyleValue(attr, restore);
+  } else {
+    if (isHexColor(input.value)) {
+      input.dataset.prevColor = normalizeHex(input.value);
+    } else if (colorInput && isHexColor(colorInput.value)) {
+      input.dataset.prevColor = normalizeHex(colorInput.value);
+    }
+    input.value = "none";
+    applyStyleValue(attr, "none");
+  }
+  updateColorFieldState(input, colorInput, noneButton);
+}
+
+function bindOpacityField() {
+  const applyOpacity = (rawValue) => {
+    if (!state.selection.length) {
+      return;
+    }
+    const percent = normalizeOpacityPercent(rawValue);
+    if (percent === null) {
+      return;
+    }
+    const rounded = Math.round(percent);
+    fieldOpacity.value = rounded;
+    fieldOpacityRange.value = rounded;
+    const value = roundNumber(rounded / 100, 2);
+    applyStyleValue("opacity", value === 1 ? "1" : String(value));
+  };
+
+  fieldOpacity.addEventListener("input", () => {
+    applyOpacity(fieldOpacity.value);
+  });
+
+  fieldOpacityRange.addEventListener("input", () => {
+    applyOpacity(fieldOpacityRange.value);
+  });
+
+  fieldOpacity.addEventListener("change", () => {
+    if (state.selection.length) {
+      pushHistory("style");
+    }
+  });
+
+  fieldOpacityRange.addEventListener("change", () => {
+    if (state.selection.length) {
+      pushHistory("style");
+    }
+  });
+}
+
+function normalizeOpacityPercent(value) {
+  const parsed = parseFloat(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return clamp(parsed, 0, 100);
 }
 
 function updateTransformFields() {
@@ -1427,6 +1602,34 @@ function getCommonAttribute(attr) {
   const first = values[0];
   const allSame = values.every((val) => val === first);
   return allSame ? first : "";
+}
+
+function getCommonOpacity() {
+  if (!state.selection.length) {
+    return null;
+  }
+  const values = state.selection.map((el) => {
+    const raw = el.getAttribute("opacity");
+    if (raw === null || raw === "") {
+      return 1;
+    }
+    const num = parseFloat(raw);
+    return Number.isFinite(num) ? num : 1;
+  });
+  const first = values[0];
+  const allSame = values.every((val) => val === first);
+  return allSame ? first : null;
+}
+
+function setOpacityInputs(value) {
+  if (value === null) {
+    fieldOpacity.value = "";
+    fieldOpacityRange.value = 100;
+    return;
+  }
+  const percent = Math.round(clamp(value * 100, 0, 100));
+  fieldOpacity.value = percent;
+  fieldOpacityRange.value = percent;
 }
 
 function getSelectionBBox() {
@@ -1527,8 +1730,48 @@ function getHandlePoints(bbox) {
     { x: cx, y: y + h, type: "s" },
     { x, y: y + h, type: "sw" },
     { x, y: cy, type: "w" },
-    { x: cx, y: y - 26, type: "rotate" },
+    { x: cx, y: y - 30, type: "rotate" },
   ];
+}
+
+function polarToPoint(cx, cy, radius, angle) {
+  return {
+    x: cx + radius * Math.cos(angle),
+    y: cy + radius * Math.sin(angle),
+  };
+}
+
+function createRotationArrow(cx, cy) {
+  const radius = 10;
+  const startAngle = Math.PI * 0.15;
+  const endAngle = Math.PI * 1.15;
+  const start = polarToPoint(cx, cy, radius, startAngle);
+  const end = polarToPoint(cx, cy, radius, endAngle);
+  const largeArc = endAngle - startAngle <= Math.PI ? 0 : 1;
+  const arc = createSvgElement("path", {
+    d: `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`,
+    class: "rotation-arrow",
+  });
+  const vx = end.x - cx;
+  const vy = end.y - cy;
+  const len = Math.hypot(vx, vy) || 1;
+  const tx = vy / len;
+  const ty = -vx / len;
+  const head = 4;
+  const back = 2;
+  const left = {
+    x: end.x - tx * head - (vx / len) * back,
+    y: end.y - ty * head - (vy / len) * back,
+  };
+  const right = {
+    x: end.x + tx * head - (vx / len) * back,
+    y: end.y + ty * head - (vy / len) * back,
+  };
+  const headEl = createSvgElement("polygon", {
+    points: `${left.x} ${left.y} ${end.x} ${end.y} ${right.x} ${right.y}`,
+    class: "rotation-arrowhead",
+  });
+  return { arc, head: headEl };
 }
 
 function startMove(point) {
@@ -1653,23 +1896,31 @@ function getResizeAnchor(bbox, handle) {
 
 function getResizeScale(bbox, handle, point) {
   const minSize = 8;
+  const safeWidth = Math.max(bbox.width, minSize);
+  const safeHeight = Math.max(bbox.height, minSize);
   let scaleX = 1;
   let scaleY = 1;
   if (handle.includes("e")) {
     const next = Math.max(minSize, point.x - bbox.x);
-    scaleX = next / bbox.width;
+    scaleX = next / safeWidth;
   }
   if (handle.includes("w")) {
     const next = Math.max(minSize, bbox.x + bbox.width - point.x);
-    scaleX = next / bbox.width;
+    scaleX = next / safeWidth;
   }
   if (handle.includes("s")) {
     const next = Math.max(minSize, point.y - bbox.y);
-    scaleY = next / bbox.height;
+    scaleY = next / safeHeight;
   }
   if (handle.includes("n")) {
     const next = Math.max(minSize, bbox.y + bbox.height - point.y);
-    scaleY = next / bbox.height;
+    scaleY = next / safeHeight;
+  }
+  if (!Number.isFinite(scaleX)) {
+    scaleX = 1;
+  }
+  if (!Number.isFinite(scaleY)) {
+    scaleY = 1;
   }
   return { x: scaleX, y: scaleY };
 }
@@ -1763,6 +2014,17 @@ function startShapeDraw(point, tool) {
     });
     applyDefaultStyle(element);
   }
+  if (tool === "square") {
+    element = createSvgElement("rect", {
+      x: point.x,
+      y: point.y,
+      width: 1,
+      height: 1,
+      rx: 0,
+      ry: 0,
+    });
+    applyDefaultStyle(element);
+  }
   if (tool === "circle") {
     element = createSvgElement("circle", {
       cx: point.x,
@@ -1791,6 +2053,20 @@ function startShapeDraw(point, tool) {
     element.setAttribute("stroke", defaultStyle.stroke);
     element.setAttribute("stroke-width", defaultStyle["stroke-width"]);
   }
+  if (tool === "arrow") {
+    ensureArrowMarker();
+    element = createSvgElement("line", {
+      x1: point.x,
+      y1: point.y,
+      x2: point.x + 1,
+      y2: point.y + 1,
+      "marker-end": "url(#sve-arrow)",
+    });
+    element.setAttribute("fill", "none");
+    element.setAttribute("stroke", defaultStyle.stroke);
+    element.setAttribute("stroke-width", defaultStyle["stroke-width"]);
+    element.setAttribute("stroke-linecap", "round");
+  }
   if (!element) {
     return;
   }
@@ -1818,6 +2094,15 @@ function updateShapeDraw(point) {
     element.setAttribute("width", w);
     element.setAttribute("height", h);
   }
+  if (tool === "square") {
+    const size = Math.max(Math.abs(point.x - start.x), Math.abs(point.y - start.y));
+    const x = point.x < start.x ? start.x - size : start.x;
+    const y = point.y < start.y ? start.y - size : start.y;
+    element.setAttribute("x", x);
+    element.setAttribute("y", y);
+    element.setAttribute("width", size);
+    element.setAttribute("height", size);
+  }
   if (tool === "circle") {
     const r = Math.max(Math.abs(point.x - start.x), Math.abs(point.y - start.y));
     element.setAttribute("r", r);
@@ -1829,6 +2114,10 @@ function updateShapeDraw(point) {
     element.setAttribute("ry", ry);
   }
   if (tool === "line") {
+    element.setAttribute("x2", point.x);
+    element.setAttribute("y2", point.y);
+  }
+  if (tool === "arrow") {
     element.setAttribute("x2", point.x);
     element.setAttribute("y2", point.y);
   }
@@ -1912,6 +2201,31 @@ function createSvgElement(tag, attrs = {}) {
   return el;
 }
 
+function ensureArrowMarker() {
+  if (!defs) {
+    return null;
+  }
+  let marker = defs.querySelector("#sve-arrow");
+  if (marker) {
+    return marker;
+  }
+  marker = document.createElementNS(SVG_NS, "marker");
+  marker.setAttribute("id", "sve-arrow");
+  marker.setAttribute("viewBox", "0 0 10 10");
+  marker.setAttribute("refX", "9");
+  marker.setAttribute("refY", "5");
+  marker.setAttribute("markerWidth", "8");
+  marker.setAttribute("markerHeight", "8");
+  marker.setAttribute("orient", "auto");
+  marker.setAttribute("markerUnits", "strokeWidth");
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
+  path.setAttribute("fill", "context-stroke");
+  marker.appendChild(path);
+  defs.appendChild(marker);
+  return marker;
+}
+
 function ensureElementId(el) {
   if (!el.id) {
     el.id = ensureUniqueId(`sve-${state.idCounter++}`);
@@ -1947,6 +2261,20 @@ function getElementMatrix(el) {
 }
 
 function setElementMatrix(el, matrix) {
+  if (
+    !matrix ||
+    ![
+      matrix.a,
+      matrix.b,
+      matrix.c,
+      matrix.d,
+      matrix.e,
+      matrix.f,
+    ].every(Number.isFinite)
+  ) {
+    el.removeAttribute("transform");
+    return;
+  }
   el.setAttribute(
     "transform",
     `matrix(${matrix.a} ${matrix.b} ${matrix.c} ${matrix.d} ${matrix.e} ${matrix.f})`
@@ -2664,6 +2992,9 @@ function showToast(message) {
 }
 
 function syncColorInput(value, input) {
+  if (!input || value.trim().toLowerCase() === "none") {
+    return;
+  }
   if (isHexColor(value)) {
     input.value = normalizeHex(value);
   } else {

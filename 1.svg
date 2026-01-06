@@ -1,0 +1,314 @@
+<svg width="1400" height="1300" viewBox="0 0 1400 1300" xmlns="http://www.w3.org/2000/svg">
+  <!-- 
+    SVG架构图 V2.3 - AGV监控系统架构 (Aligned)
+    调整内容：
+    1. 将左右两侧的“AGV车辆集群”和“RCS调度系统”面板向上移动至 Y=560，与中间的“服务端核心”层水平对齐。
+    2. 更新对应的连接线坐标。
+  -->
+  
+  <defs>
+    <!-- 箭头定义 -->
+    <marker id="arrow-end" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#333333" />
+    </marker>
+    <marker id="arrow-start" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M9,0 L9,6 L0,3 z" fill="#333333" />
+    </marker>
+    
+    <!-- 阴影滤镜 -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="2" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    /* 全局样式 */
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .title-main { font-size: 28px; font-weight: bold; fill: #000000; text-anchor: middle; }
+    .layer-title { font-size: 20px; font-weight: bold; fill: #000000; }
+    .block-title { font-size: 16px; font-weight: bold; fill: #333333; }
+    .node-text { font-size: 14px; fill: #000000; text-anchor: middle; dominant-baseline: middle; }
+    .meta-text { font-size: 11px; fill: #555555; text-anchor: middle; }
+    .conn-label { font-size: 12px; fill: #333333; background-color: #FFF; font-weight: bold; }
+    
+    /* 容器样式 */
+    .layer-box { stroke: #333333; stroke-width: 2px; rx: 8; }
+    .block-box { fill: rgba(255,255,255,0.4); stroke: #666666; stroke-width: 1.5px; stroke-dasharray: 5,5; rx: 4; }
+    .node-box { fill: #FFFFFF; stroke: #333333; stroke-width: 1.5px; rx: 4; filter: url(#shadow); }
+    
+    /* 连接线样式 */
+    .path-line { fill: none; stroke: #333333; stroke-width: 2px; }
+    .path-dashed { fill: none; stroke: #333333; stroke-width: 1.5px; stroke-dasharray: 5,5; }
+  </style>
+
+  <!-- 背景 -->
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  
+  <!-- 标题 -->
+  <text x="700" y="40" class="title-main">AGV监控调度系统技术架构图</text>
+
+  <!-- ==================== 1. 外部系统层 (左侧 & 右侧) ==================== -->
+  
+  <!-- 左侧：AGV车辆集群 (Y坐标调整为560以对齐中间层) -->
+  <g transform="translate(50, 560)">
+    <rect x="0" y="0" width="220" height="300" fill="#42A5F5" fill-opacity="0.2" stroke="#42A5F5" stroke-width="2" rx="8" />
+    <text x="110" y="30" class="layer-title" text-anchor="middle">AGV车辆集群</text>
+    
+    <!-- 节点 -->
+    <rect x="20" y="60" width="180" height="50" class="node-box" />
+    <text x="110" y="85" class="node-text">位置上报</text>
+    
+    <rect x="20" y="120" width="180" height="50" class="node-box" />
+    <text x="110" y="145" class="node-text">状态/电量上报</text>
+    
+    <rect x="20" y="180" width="180" height="50" class="node-box" />
+    <text x="110" y="205" class="node-text">实时告警推送</text>
+    
+  </g>
+
+  <!-- 右侧：RCS调度系统 (Y坐标调整为560以对齐中间层) -->
+  <g transform="translate(1130, 560)">
+    <rect x="0" y="0" width="220" height="300" fill="#42A5F5" fill-opacity="0.2" stroke="#42A5F5" stroke-width="2" rx="8" />
+    <text x="110" y="30" class="layer-title" text-anchor="middle">RCS调度系统</text>
+    
+    <rect x="20" y="60" width="180" height="50" class="node-box" />
+    <text x="110" y="85" class="node-text">任务调度核心</text>
+    
+    <rect x="20" y="120" width="180" height="50" class="node-box" />
+    <text x="110" y="145" class="node-text">路径规划/交管</text>
+    
+    <rect x="20" y="180" width="180" height="50" class="node-box" />
+    <text x="110" y="205" class="node-text">API 服务端</text>
+    
+  </g>
+
+  <!-- ==================== 2. 客户端层 (Top) ==================== -->
+  <g transform="translate(300, 80)">
+    <!-- 客户端背景 -->
+    <rect x="0" y="0" width="800" height="280" fill="#FFE0B2" class="layer-box" />
+    <text x="20" y="30" class="layer-title">客户端层</text>
+    
+    <!-- 渲染引擎模块 -->
+    <g transform="translate(30, 60)">
+      <rect x="0" y="0" width="350" height="200" class="block-box" />
+      <text x="10" y="25" class="block-title">地图渲染核心</text>
+      
+      <rect x="20" y="40" width="310" height="40" class="node-box" />
+      <text x="175" y="60" class="node-text">分层渲染</text>
+      
+      <rect x="20" y="90" width="150" height="40" class="node-box" />
+      <text x="95" y="110" class="node-text">视野剔除</text>
+      
+      <rect x="180" y="90" width="150" height="40" class="node-box" />
+      <text x="255" y="110" class="node-text">局部脏矩形刷新</text>
+      
+      <rect x="20" y="140" width="310" height="40" class="node-box" style="fill:#FFF9C4"/>
+      <text x="175" y="160" class="node-text">硬件加速</text>
+    </g>
+
+    <!-- 通用功能模块 -->
+    <g transform="translate(410, 60)">
+      <rect x="0" y="0" width="360" height="200" class="block-box" />
+      <text x="10" y="25" class="block-title">应用功能模块</text>
+      
+      <rect x="20" y="40" width="150" height="40" class="node-box" />
+      <text x="95" y="60" class="node-text">界面交互模块</text>
+      
+      <rect x="190" y="40" width="150" height="40" class="node-box" />
+      <text x="265" y="60" class="node-text">数据状态管理</text>
+      
+      <rect x="20" y="90" width="320" height="40" class="node-box" />
+      <text x="180" y="110" class="node-text">通讯模块</text>
+      
+      <rect x="20" y="140" width="320" height="40" class="node-box" />
+      <text x="180" y="160" class="node-text">工具模块</text>
+    </g>
+  </g>
+
+  <!-- ==================== 3. 接口网关层 (Middle-Top) ==================== -->
+  <g transform="translate(300, 400)">
+    <rect x="0" y="0" width="800" height="120" fill="#FFCC80" class="layer-box" />
+    <text x="20" y="30" class="layer-title">接口接入层</text>
+    
+    <!-- 
+       水平对齐计算:
+       总宽 800. 两个模块宽 220*2 = 440. 剩余空间 360.
+       间距 = 360/3 = 120.
+       模块1 X = 120. 
+       模块2 X = 120 + 220 + 120 = 460.
+    -->
+    <g transform="translate(120, 40)">
+      <rect x="0" y="0" width="220" height="60" class="node-box" />
+      <text x="110" y="25" class="node-text" font-weight="bold">WebSocket 服务</text>
+      <text x="110" y="45" class="meta-text">实时数据推送</text>
+    </g>
+    
+    <g transform="translate(460, 40)">
+      <rect x="0" y="0" width="220" height="60" class="node-box" />
+      <text x="110" y="25" class="node-text" font-weight="bold">HTTP REST API</text>
+      <text x="110" y="45" class="meta-text">查询/配置/管理请求</text>
+    </g>
+  </g>
+
+  <!-- ==================== 4. 业务与集成层 (Middle) ==================== -->
+  <g transform="translate(300, 560)">
+    <rect x="0" y="0" width="800" height="300" fill="#B9F6CA" class="layer-box" />
+    <text x="20" y="30" class="layer-title">服务端核心</text>
+    
+    <!-- 
+       水平对齐计算:
+       总宽 800. 模块宽 210, 300, 210. 总内容 720. 剩余 80.
+       间距 = 80/4 = 20.
+       Left X = 20.
+       Middle X = 20+210+20 = 250.
+       Right X = 250+300+20 = 570.
+    -->
+    
+    <!-- 左侧集成：AGV -->
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="210" height="230" class="block-box" style="fill:#E3F2FD" />
+      <text x="10" y="25" class="block-title">AGV集成</text>
+      
+      <rect x="15" y="40" width="180" height="50" class="node-box" />
+      <text x="105" y="65" class="node-text">MQTT 客户端</text>
+      
+      <rect x="15" y="100" width="180" height="50" class="node-box" />
+      <text x="105" y="125" class="node-text">消息异步队列</text>
+      
+      <rect x="15" y="160" width="180" height="50" class="node-box" />
+      <text x="105" y="185" class="node-text">数据清洗/去重</text>
+    </g>
+
+    <!-- 中间：业务逻辑 -->
+    <g transform="translate(250, 50)">
+      <rect x="0" y="0" width="300" height="230" class="block-box" />
+      <text x="10" y="25" class="block-title">业务逻辑处理</text>
+      
+      <rect x="20" y="40" width="260" height="35" class="node-box" />
+      <text x="150" y="57.5" class="node-text">设备管理</text>
+      
+      <rect x="20" y="85" width="260" height="35" class="node-box" />
+      <text x="150" y="102.5" class="node-text">任务管理</text>
+      
+      <rect x="20" y="130" width="260" height="35" class="node-box" />
+      <text x="150" y="147.5" class="node-text">告警引擎 &amp; 异常处理</text>
+      
+      <rect x="20" y="175" width="260" height="35" class="node-box" />
+      <text x="150" y="192.5" class="node-text">数据统计 &amp; 分析</text>
+    </g>
+    
+    <!-- 右侧集成：RCS -->
+    <g transform="translate(570, 50)">
+      <rect x="0" y="0" width="210" height="230" class="block-box" style="fill:#E3F2FD" />
+      <text x="10" y="25" class="block-title">RCS集成</text>
+      
+      <rect x="15" y="40" width="180" height="50" class="node-box" />
+      <text x="105" y="65" class="node-text">任务同步接口</text>
+      
+      <rect x="15" y="100" width="180" height="50" class="node-box" />
+      <text x="105" y="125" class="node-text">状态轮询/查询</text>
+      
+      <rect x="15" y="160" width="180" height="50" class="node-box" />
+      <text x="105" y="185" class="node-text">全量数据校准</text>
+    </g>
+  </g>
+
+  <!-- ==================== 5. 数据存储层 (Bottom) ==================== -->
+  <g transform="translate(300, 900)">
+    <rect x="0" y="0" width="800" height="350" fill="#C5CAE9" class="layer-box" />
+    <text x="20" y="30" class="layer-title">数据持久化层</text>
+    
+    <g transform="translate(50, 60)">
+      <!-- 第一行表 -->
+      <rect x="0" y="0" width="200" height="100" class="node-box" />
+      <text x="100" y="30" class="node-text" font-weight="bold">设备基础信息表</text>
+      <line x1="10" y1="50" x2="190" y2="50" stroke="#999" stroke-width="1"/>
+      <text x="100" y="70" class="meta-text">ID, Type, IP, Status</text>
+
+      <g transform="translate(250, 0)">
+        <rect x="0" y="0" width="200" height="100" class="node-box" style="stroke: #D32F2F; stroke-width: 2px;" />
+        <text x="100" y="30" class="node-text" font-weight="bold">设备实时状态表</text>
+        <line x1="10" y1="50" x2="190" y2="50" stroke="#999" stroke-width="1"/>
+        <text x="100" y="70" class="meta-text">X, Y, Angle, Battery</text>
+      </g>
+      
+      <g transform="translate(500, 0)">
+        <rect x="0" y="0" width="200" height="100" class="node-box" />
+        <text x="100" y="30" class="node-text" font-weight="bold">任务信息表</text>
+        <line x1="10" y1="50" x2="190" y2="50" stroke="#999" stroke-width="1"/>
+        <text x="100" y="70" class="meta-text">Path, Type, Priority</text>
+      </g>
+      
+      <!-- 第二行表 -->
+      <g transform="translate(0, 140)">
+        <rect x="0" y="0" width="200" height="80" class="node-box" />
+        <text x="100" y="40" class="node-text">告警记录表</text>
+      </g>
+      
+      <g transform="translate(250, 140)">
+        <rect x="0" y="0" width="200" height="80" class="node-box" />
+        <text x="100" y="40" class="node-text">用户/角色/权限表</text>
+      </g>
+      
+      <g transform="translate(500, 140)">
+        <rect x="0" y="0" width="200" height="80" class="node-box" />
+        <text x="100" y="40" class="node-text">操作日志 &amp; 审计</text>
+      </g>
+
+      <!-- 优化策略标注 -->
+      <g transform="translate(0, 240)">
+         <text x="350" y="20" class="meta-text" font-size="14" fill="#333">★ 数据库优化：连接池管理 | 索引优化 | 历史数据定期归档</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== 连接线 (Connections) ==================== -->
+  
+  <!-- 1. Client to Interface 
+      WebSocket: Client Center (190) -> Interface WS (230)
+      HTTP: Client Center (590) -> Interface HTTP (570)
+  -->
+  <path d="M510,360 L510,380 L230,380 L230,400" class="path-line" marker-end="url(#arrow-end)" display="none"/> <!-- Old path hidden -->
+  
+  <path d="M530,360 L530,400" class="path-line" marker-end="url(#arrow-end)" />
+  <path d="M870,360 L870,400" class="path-line" marker-end="url(#arrow-end)" />
+  <text x="540" y="380" class="conn-label">WebSocket</text>
+  <text x="880" y="380" class="conn-label">HTTP</text>
+
+  <!-- 2. Interface to Business -->
+  <path d="M530,520 L530,540 L700,540 L700,560" class="path-line" marker-end="url(#arrow-end)" />
+  <path d="M870,520 L870,540 L700,540" class="path-line" /> <!-- Join to previous -->
+  
+  <!-- 3. Business to Data -->
+  <path d="M700,860 L700,900" class="path-line" marker-end="url(#arrow-end)" />
+  <text x="710" y="885" class="conn-label">JDBC/ORM</text>
+
+  <!-- 4. AGV to Server Integration (Adjusted Y to 710) -->
+  <path d="M270,710 L320,710" class="path-line" marker-end="url(#arrow-end)" />
+  <text x="275" y="700" class="conn-label">MQTT</text>
+  
+  <!-- 5. Server Integration to RCS (Adjusted Y to 710) -->
+  <path d="M1080,710 L1130,710" class="path-line" marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+  <text x="1085" y="700" class="conn-label">HTTP API</text>
+
+  <!-- 注释图例 -->
+  <g transform="translate(50, 50)">
+    <rect x="0" y="0" width="180" height="100" fill="#FFF" stroke="#CCC" rx="4" />
+    <text x="10" y="20" font-weight="bold" font-size="12">图例说明</text>
+    <circle cx="20" cy="40" r="6" fill="#FFE0B2" stroke="#333" />
+    <text x="35" y="44" font-size="11">客户端层</text>
+    <circle cx="20" cy="60" r="6" fill="#B9F6CA" stroke="#333" />
+    <text x="35" y="64" font-size="11">核心业务</text>
+    <circle cx="20" cy="80" r="6" fill="#C5CAE9" stroke="#333" />
+    <text x="35" y="84" font-size="11">数据存储</text>
+  </g>
+
+</svg>

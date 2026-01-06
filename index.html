@@ -98,21 +98,68 @@
       <div class="workspace">
         <aside class="toolbar">
           <div class="toolbar-group">
-            <button class="tool active" data-tool="select">选择</button>
-            <button class="tool" data-tool="pan">拖拽</button>
-            <button class="tool" data-tool="zoom">缩放</button>
+            <div class="tool-group-title">&#x64CD;&#x4F5C;</div>
+            <button class="tool active" data-tool="select">
+              <span class="tool-icon icon-select" aria-hidden="true"></span>
+              <span class="tool-label">&#x9009;&#x62E9;</span>
+            </button>
+            <button class="tool" data-tool="pan">
+              <span class="tool-icon icon-pan" aria-hidden="true"></span>
+              <span class="tool-label">&#x62D6;&#x62FD;</span>
+            </button>
+            <button class="tool" data-tool="zoom">
+              <span class="tool-icon icon-zoom" aria-hidden="true"></span>
+              <span class="tool-label">&#x7F29;&#x653E;</span>
+            </button>
           </div>
           <div class="toolbar-group">
-            <button class="tool" data-tool="rect">矩形</button>
-            <button class="tool" data-tool="circle">圆形</button>
-            <button class="tool" data-tool="ellipse">椭圆</button>
-            <button class="tool" data-tool="line">线段</button>
-            <button class="tool" data-tool="path">路径</button>
-            <button class="tool" data-tool="text">文字</button>
-            <button class="tool" data-tool="image">图片</button>
+            <div class="tool-group-title">&#x5F62;&#x72B6;</div>
+            <button class="tool" data-tool="rect">
+              <span class="tool-icon icon-rect" aria-hidden="true"></span>
+              <span class="tool-label">&#x77E9;&#x5F62;</span>
+            </button>
+            <button class="tool" data-tool="square">
+              <span class="tool-icon icon-square" aria-hidden="true"></span>
+              <span class="tool-label">&#x6B63;&#x65B9;&#x5F62;</span>
+            </button>
+            <button class="tool" data-tool="circle">
+              <span class="tool-icon icon-circle" aria-hidden="true"></span>
+              <span class="tool-label">&#x5706;&#x5F62;</span>
+            </button>
+            <button class="tool" data-tool="ellipse">
+              <span class="tool-icon icon-ellipse" aria-hidden="true"></span>
+              <span class="tool-label">&#x692D;&#x5706;</span>
+            </button>
+            <button class="tool" data-tool="line">
+              <span class="tool-icon icon-line" aria-hidden="true"></span>
+              <span class="tool-label">&#x7EBF;&#x6BB5;</span>
+            </button>
+            <button class="tool" data-tool="arrow">
+              <span class="tool-icon icon-arrow" aria-hidden="true"></span>
+              <span class="tool-label">&#x7BAD;&#x5934;</span>
+            </button>
+            <button class="tool" data-tool="path">
+              <span class="tool-icon icon-path" aria-hidden="true"></span>
+              <span class="tool-label">&#x8DEF;&#x5F84;</span>
+            </button>
           </div>
           <div class="toolbar-group">
-            <button class="tool" data-tool="nodes">节点</button>
+            <div class="tool-group-title">&#x5185;&#x5BB9;</div>
+            <button class="tool" data-tool="text">
+              <span class="tool-icon icon-text" aria-hidden="true"></span>
+              <span class="tool-label">&#x6587;&#x5B57;</span>
+            </button>
+            <button class="tool" data-tool="image">
+              <span class="tool-icon icon-image" aria-hidden="true"></span>
+              <span class="tool-label">&#x56FE;&#x7247;</span>
+            </button>
+          </div>
+          <div class="toolbar-group">
+            <div class="tool-group-title">&#x8282;&#x70B9;</div>
+            <button class="tool" data-tool="nodes">
+              <span class="tool-icon icon-nodes" aria-hidden="true"></span>
+              <span class="tool-label">&#x8282;&#x70B9;</span>
+            </button>
           </div>
         </aside>
 
@@ -195,6 +242,14 @@
                 <div class="color-inputs">
                   <input id="field-fill" type="text" placeholder="#ffffff" />
                   <input id="field-fill-color" type="color" value="#ffffff" />
+                  <button
+                    class="chip-btn"
+                    id="btn-fill-none"
+                    type="button"
+                    aria-pressed="false"
+                  >
+                    &#x65E0;&#x586B;&#x5145;
+                  </button>
                 </div>
               </div>
               <div class="field">
@@ -202,6 +257,14 @@
                 <div class="color-inputs">
                   <input id="field-stroke" type="text" placeholder="#222222" />
                   <input id="field-stroke-color" type="color" value="#222222" />
+                  <button
+                    class="chip-btn"
+                    id="btn-stroke-none"
+                    type="button"
+                    aria-pressed="false"
+                  >
+                    &#x65E0;&#x63CF;&#x8FB9;
+                  </button>
                 </div>
               </div>
               <div class="field">
@@ -210,7 +273,25 @@
               </div>
               <div class="field">
                 <label for="field-opacity">透明度</label>
-                <input id="field-opacity" type="number" min="0" max="1" step="0.05" />
+                <div class="opacity-controls">
+                  <input
+                    id="field-opacity-range"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                  />
+                  <div class="opacity-input">
+                    <input
+                      id="field-opacity"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                    />
+                    <span class="unit">%</span>
+                  </div>
+                </div>
               </div>
               <div class="field">
                 <label for="field-linecap">线帽</label>
@@ -348,6 +429,30 @@
           </button>
           <button type="button" class="primary-btn" id="btn-export-confirm">
             导出
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="modal-draft">
+      <form class="modal-card">
+        <div class="modal-title">&#x8349;&#x7A3F;&#x6062;&#x590D;</div>
+        <div class="modal-body">
+          <p class="modal-text">&#x68C0;&#x6D4B;&#x5230;&#x4E0A;&#x6B21;&#x81EA;&#x52A8;&#x4FDD;&#x5B58;&#x7684;&#x8349;&#x7A3F;&#x3002;</p>
+          <label class="check-row">
+            <input id="draft-skip" type="checkbox" />
+            <span>&#x4E0B;&#x6B21;&#x4E0D;&#x518D;&#x63D0;&#x793A;</span>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" id="btn-draft-later">
+            &#x7A0D;&#x540E;
+          </button>
+          <button type="button" class="ghost-btn" id="btn-draft-delete">
+            &#x5220;&#x9664;&#x8349;&#x7A3F;
+          </button>
+          <button type="button" class="primary-btn" id="btn-draft-restore">
+            &#x6062;&#x590D;
           </button>
         </div>
       </form>
