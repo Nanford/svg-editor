@@ -16,12 +16,20 @@ const docTitle = document.getElementById("doc-title");
 const docStatus = document.getElementById("doc-status");
 
 const toolbarButtons = document.querySelectorAll(".tool");
+const toolbar = document.querySelector(".toolbar");
+const btnToolbarToggle = document.getElementById("btn-toolbar-toggle");
 const menuGroups = document.querySelectorAll(".menu-group");
 
 const modalNew = document.getElementById("modal-new");
 const modalExport = document.getElementById("modal-export");
 const modalSource = document.getElementById("modal-source");
 const modalHelp = document.getElementById("modal-help");
+const modalDraft = document.getElementById("modal-draft");
+
+const draftSkip = document.getElementById("draft-skip");
+const btnDraftLater = document.getElementById("btn-draft-later");
+const btnDraftDelete = document.getElementById("btn-draft-delete");
+const btnDraftRestore = document.getElementById("btn-draft-restore");
 
 const newPreset = document.getElementById("new-preset");
 const newWidth = document.getElementById("new-width");
@@ -72,6 +80,13 @@ const canvasStage = document.querySelector(".canvas-stage");
 
 const toast = document.getElementById("toast");
 
+const DRAFT_KEY = "sve-draft";
+const DRAFT_POLICY_KEY = "sve-draft-policy";
+const TOOLBAR_STATE_KEY = "sve-toolbar-state";
+const MAX_SELECT_DEPTH = 6;
+const HIT_TEST_TIMEOUT = 2000;
+let pendingDraft = null;
+
 const defaultStyle = {
   fill: "#f8c15c",
   stroke: "#1b1916",
@@ -107,6 +122,7 @@ const state = {
   drag: null,
   pathDraw: null,
   pathEdit: null,
+  hitTest: null,
 };
 
 const toolLabels = {
@@ -185,6 +201,38 @@ function bindToolbar() {
       setTool(btn.dataset.tool);
     });
   });
+
+  if (btnToolbarToggle && toolbar) {
+    btnToolbarToggle.addEventListener("click", () => {
+      const expanded = !toolbar.classList.contains("is-expanded");
+      setToolbarExpanded(expanded);
+    });
+  }
+
+  initToolbarState();
+}
+
+function initToolbarState() {
+  if (!toolbar) {
+    return;
+  }
+  const stored = localStorage.getItem(TOOLBAR_STATE_KEY);
+  const expanded = stored ? stored === "expanded" : false;
+  setToolbarExpanded(expanded, { persist: false });
+}
+
+function setToolbarExpanded(expanded, options = {}) {
+  if (!toolbar) {
+    return;
+  }
+  toolbar.classList.toggle("is-expanded", expanded);
+  if (btnToolbarToggle) {
+    btnToolbarToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+  }
+  if (options.persist === false) {
+    return;
+  }
+  localStorage.setItem(TOOLBAR_STATE_KEY, expanded ? "expanded" : "collapsed");
 }
 
 function bindModals() {
@@ -237,6 +285,23 @@ function bindModals() {
     newWidth.value = w;
     newHeight.value = h;
   });
+
+  bindDraftModal();
+}
+
+function bindDraftModal() {
+  if (!modalDraft) {
+    return;
+  }
+  if (btnDraftLater) {
+    btnDraftLater.addEventListener("click", () => handleDraftAction("later"));
+  }
+  if (btnDraftDelete) {
+    btnDraftDelete.addEventListener("click", () => handleDraftAction("delete"));
+  }
+  if (btnDraftRestore) {
+    btnDraftRestore.addEventListener("click", () => handleDraftAction("restore"));
+  }
 }
 
 function bindFields() {
@@ -657,7 +722,7 @@ function drawRuler(canvas, axis) {
   ctx.fillRect(0, 0, rect.width, rect.height);
   ctx.strokeStyle = theme.line;
   ctx.fillStyle = theme.text;
-  ctx.font = "11px IBM Plex Sans";
+  ctx.font = theme.font;
 
   const view = getUiViewBox();
   const length = axis === "x" ? view.width : view.height;
@@ -665,6 +730,8 @@ function drawRuler(canvas, axis) {
   const step = pickRulerStep(length);
   const scale = pixels / length;
   const start = axis === "x" ? view.x : view.y;
+  const majorTick = 12;
+  const minorTick = 7;
 
   for (
     let value = Math.floor(start / step) * step;
@@ -673,11 +740,11 @@ function drawRuler(canvas, axis) {
   ) {
     const pos = (value - start) * scale;
     const isMajor = Math.round(value) % (step * 5) === 0;
-    ctx.lineWidth = isMajor ? 1.4 : 1;
+    ctx.lineWidth = isMajor ? 1.6 : 1.1;
     ctx.strokeStyle = isMajor ? theme.major : theme.line;
     if (axis === "x") {
       ctx.beginPath();
-      ctx.moveTo(pos, rect.height - (isMajor ? 10 : 6));
+      ctx.moveTo(pos, rect.height - (isMajor ? majorTick : minorTick));
       ctx.lineTo(pos, rect.height);
       ctx.stroke();
       if (isMajor) {
@@ -686,7 +753,7 @@ function drawRuler(canvas, axis) {
       }
     } else {
       ctx.beginPath();
-      ctx.moveTo(rect.width - (isMajor ? 10 : 6), pos);
+      ctx.moveTo(rect.width - (isMajor ? majorTick : minorTick), pos);
       ctx.lineTo(rect.width, pos);
       ctx.stroke();
       if (isMajor) {
@@ -703,6 +770,8 @@ function drawRuler(canvas, axis) {
 
 function getRulerTheme() {
   const styles = getComputedStyle(document.documentElement);
+  const fontFamily =
+    styles.getPropertyValue("--sans").trim() || "IBM Plex Sans";
   return {
     bg: styles.getPropertyValue("--ruler-bg").trim() || "#2b241e",
     line: styles.getPropertyValue("--ruler-line").trim() || "rgba(241,93,61,0.45)",
@@ -710,6 +779,7 @@ function getRulerTheme() {
       styles.getPropertyValue("--ruler-line-strong").trim() ||
       "rgba(241,93,61,0.75)",
     text: styles.getPropertyValue("--ruler-text").trim() || "rgba(248,240,229,0.85)",
+    font: `11px ${fontFamily}`,
   };
 }
 function pickRulerStep(length) {
@@ -928,23 +998,97 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
+function getDraftPolicy() {
+  return localStorage.getItem(DRAFT_POLICY_KEY) || "ask";
+}
+
+function setDraftPolicy(value) {
+  if (!value || value === "ask") {
+    localStorage.removeItem(DRAFT_POLICY_KEY);
+    return;
+  }
+  localStorage.setItem(DRAFT_POLICY_KEY, value);
+}
+
+function applyDraft(data) {
+  if (!data || !data.svg) {
+    return;
+  }
+  loadSvgFromText(data.svg, { pushHistory: false });
+  state.doc.background = data.background || "#ffffff";
+  applyDocSettings();
+  updateViewBox();
+  pushHistory("restore");
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  pendingDraft = null;
+}
+
+function openDraftModal(data) {
+  pendingDraft = data;
+  if (draftSkip) {
+    draftSkip.checked = false;
+  }
+  openModal(modalDraft);
+}
+
+function handleDraftAction(action) {
+  if (!pendingDraft) {
+    if (modalDraft && modalDraft.open) {
+      modalDraft.close();
+    }
+    return;
+  }
+  const skip = draftSkip && draftSkip.checked;
+  if (action === "restore") {
+    applyDraft(pendingDraft);
+    if (skip) {
+      setDraftPolicy("auto-restore");
+    }
+  }
+  if (action === "delete") {
+    clearDraft();
+    if (skip) {
+      setDraftPolicy("ignore");
+    }
+  }
+  if (action === "later") {
+    if (skip) {
+      setDraftPolicy("ignore");
+    }
+  }
+  if (modalDraft && modalDraft.open) {
+    modalDraft.close();
+  }
+  pendingDraft = null;
+  if (draftSkip) {
+    draftSkip.checked = false;
+  }
+}
+
 function restoreDraft() {
-  const draft = localStorage.getItem("sve-draft");
+  const draft = localStorage.getItem(DRAFT_KEY);
   if (!draft) {
     return;
   }
   try {
     const data = JSON.parse(draft);
-    const shouldRestore = confirm("是否恢复上次自动保存的草稿？");
-    if (shouldRestore && data.svg) {
-      loadSvgFromText(data.svg, { pushHistory: false });
-      state.doc.background = data.background || "#ffffff";
-      applyDocSettings();
-      updateViewBox();
-      pushHistory("restore");
+    if (!data || !data.svg) {
+      return;
     }
+    const policy = getDraftPolicy();
+    if (policy === "auto-restore") {
+      applyDraft(data);
+      return;
+    }
+    if (policy === "ignore") {
+      return;
+    }
+    openDraftModal(data);
   } catch (error) {
-    localStorage.removeItem("sve-draft");
+    localStorage.removeItem(DRAFT_KEY);
   }
 }
 
@@ -953,7 +1097,7 @@ function saveDraft() {
     svg: serializeSvg(false),
     background: state.doc.background,
   };
-  localStorage.setItem("sve-draft", JSON.stringify(payload));
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
   docStatus.textContent = "草稿已保存";
 }
 
@@ -1098,7 +1242,10 @@ function onPointerDown(event) {
     return;
   }
 
-  const selectable = findSelectable(target, { preferGroup: !event.altKey });
+  const selectable = findSelectable(target, {
+    preferGroup: !event.altKey,
+    allowCycle: !event.shiftKey,
+  });
 
   if (state.ui.tool === "select" || state.ui.tool === "nodes") {
     if (selectable) {
@@ -1210,33 +1357,101 @@ function svgPoint(event) {
 }
 
 function findSelectable(target, options = {}) {
-  const preferGroup = options.preferGroup !== false;
-  if (!target || target === svg) {
+  const textTarget = getTextTarget(target);
+  const baseTarget = textTarget || target;
+  const path = buildSelectablePath(baseTarget);
+  if (!path.length) {
     return null;
   }
-  if (target.closest("[data-sve-ui]")) {
-    return null;
-  }
-  if (!target.closest("#sve-content") || target.closest("defs")) {
-    return null;
-  }
+  const preferGroup = options.preferGroup !== false && !textTarget;
+  const allowCycle = options.allowCycle !== false;
+  let order = path;
   if (preferGroup) {
-    const group = target.closest("#sve-content g");
-    if (group) {
-      return group;
+    const groupIndex = path.findIndex(
+      (el) => el.tagName && el.tagName.toLowerCase() === "g"
+    );
+    if (groupIndex >= 0) {
+      order = buildDepthCycleOrder(path, groupIndex);
     }
   }
+  if (allowCycle) {
+    const now = Date.now();
+    if (
+      state.hitTest &&
+      state.hitTest.target === target &&
+      now - state.hitTest.time < HIT_TEST_TIMEOUT
+    ) {
+      const nextIndex = (state.hitTest.index + 1) % order.length;
+      state.hitTest = {
+        target,
+        order,
+        index: nextIndex,
+        time: now,
+      };
+      return order[nextIndex];
+    }
+  } else {
+    state.hitTest = null;
+  }
+  state.hitTest = {
+    target,
+    order,
+    index: 0,
+    time: Date.now(),
+  };
+  return order[0];
+}
+
+function getTextTarget(target) {
+  if (!target) {
+    return null;
+  }
+  const textEl = target.closest("text");
+  if (!textEl) {
+    return null;
+  }
+  if (textEl.closest("[data-sve-ui]")) {
+    return null;
+  }
+  if (!textEl.closest("#sve-content") || textEl.closest("defs")) {
+    return null;
+  }
+  return textEl;
+}
+
+function buildSelectablePath(target) {
+  if (!target || target === svg) {
+    return [];
+  }
+  if (target.closest("[data-sve-ui]")) {
+    return [];
+  }
+  if (!target.closest("#sve-content") || target.closest("defs")) {
+    return [];
+  }
+  const path = [];
   let node = target;
-  while (node && node !== content) {
+  while (node && node !== content && path.length < MAX_SELECT_DEPTH) {
     if (node.tagName) {
       const tag = node.tagName.toLowerCase();
       if (isSelectableTag(tag)) {
-        return node;
+        path.push(node);
       }
     }
     node = node.parentNode;
   }
-  return null;
+  return path;
+}
+
+function buildDepthCycleOrder(path, startIndex) {
+  const order = [path[startIndex]];
+  for (let i = startIndex - 1; i >= 0; i -= 1) {
+    order.push(path[i]);
+  }
+  for (let i = startIndex + 1; i < path.length; i += 1) {
+    order.push(path[i]);
+  }
+  return order;
 }
 
 function isSelectableTag(tag) {
@@ -1317,7 +1532,7 @@ function updateSelectionUI() {
           selectionLayer.appendChild(arrow.arc);
           selectionLayer.appendChild(arrow.head);
         }
-        const radius = handle.type === "rotate" ? 6 : 4;
+        const radius = handle.type === "rotate" ? 5 : 4;
         const circle = createSvgElement("circle", {
           cx: handle.x,
           cy: handle.y,
